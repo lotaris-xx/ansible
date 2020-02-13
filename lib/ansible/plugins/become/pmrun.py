@@ -52,8 +52,22 @@ DOCUMENTATION = """
             ini:
               - section: pmrun_become_plugin
                 key: password
-    notes:
-      - This plugin ignores the become_user supplied and uses pmrun's own configuration to select the user.
+        become_user:
+            description: User you 'become' to execute the task
+            required: False
+            ini:
+              - section: privilege_escalation
+                key: become_user
+              - section: pmrun_become_plugin
+                key: user
+             vars:
+              - name: ansible_become_user
+              - name: ansible_pmrun_user
+             env:
+             - name: ANSIBLE_BECOME_USER
+             - name: ANSIBLE_PMRUN_USER
+    notes
+      - become_user depends on pmrun being correctly configured to allow running the command as become_user
 """
 
 from ansible.plugins.become import BecomeBase
@@ -73,4 +87,9 @@ class BecomeModule(BecomeBase):
 
         become = self.get_option('become_exe') or self.name
         flags = self.get_option('become_flags') or ''
-        return '%s %s %s' % (become, flags, shlex_quote(self._build_success_command(cmd, shell)))
+
+        user = self.get_option('become_user') or ''
+        if user:
+            user = '-u %s' % (user)
+
+        return '%s %s %s %s' % (become, flags, user, shlex_quote(self._build_success_command(cmd, shell)))
